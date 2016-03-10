@@ -25,7 +25,6 @@ general_args="--tcp-established \
 --enable-fs tracefs \
 -vvvvvv \
 -t $PID"
-#--freeze-cgroup /sys/fs/cgroup/freezer/lxc/$CNAME"
 
 mkdir $checkpointdir	
 ssh $HOST "mkdir $checkpointdir"
@@ -46,13 +45,11 @@ for iter in $(seq 1 $ITERS); do
 		fi
 	elif [ $iter -eq $ITERS ] || [ $pages_written -lt 1024 ]; then 
 		# Last snapshot -- has parent, kill afterwards
-		#args="--prev-images-dir=$checkpointdir/$((iter - 1))/ --track-mem --leave-stopped"
 		args="--prev-images-dir=../$((iter - 1))/ --track-mem --leave-stopped"
 		action="dump"
 		fin=1
 	else
 		# Other snapshots -- have parent, keep running
-		#args="--prev-images-dir=$checkpointdir/$((iter - 1))/ --track-mem --leave-running"
 		args="--prev-images-dir=../$((iter - 1))/ --track-mem --leave-running"
 		action="pre-dump"
 	fi
@@ -68,16 +65,18 @@ for iter in $(seq 1 $ITERS); do
 		return 0 
 	fi
  
-	ssh $HOST "mkdir $checkpointdir/$iter"		
+	#ssh $HOST "mkdir $checkpointdir/$iter"		
 
-	#Kill the rsync process and continue with a new one. That will be the last rsync	
-	sync_start=$(date -u +"%s%6N")
-	if [ $fin -eq 1 ] ; then
-		kill -9 $rsync_pid
-		rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
-		sync_finish=$(date -u +"%s%6N")	
-		diff=$(($sync_finish- $sync_start))
-		echo "Final Rsync: $diff μs\n" |tee -a statistic.txt
+	#When on final dump,Kill the rsync process and continue with a new one. That will be the last rsync	
+	if [ $rsync_pid -ne -1 ]; then
+		sync_start=$(date -u +"%s%6N")
+		if [ $fin -eq 1 ] ; then
+			kill -9 $rsync_pid
+			rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
+			sync_finish=$(date -u +"%s%6N")	
+			diff=$(($sync_finish- $sync_start))
+			echo "Final Rsync: $diff μ" |tee -a statistic.txt
+		fi
 	fi
 	
 	du -sh $checkpointdir/$iter/ | tee -a statistic.txt
