@@ -1,0 +1,63 @@
+#!/bin/sh
+set -e
+
+usage() {
+  echo $0 container user@host.to.migrate.to
+  exit 1
+}
+
+if [ "$(id -u)" != "0" ]; then
+  echo "ERROR: Must run as root."
+  usage
+fi
+
+if [ "$#" != "2" ]; then
+  echo "Bad number of args."
+  usage
+fi
+
+name=$1
+host=$2
+
+checkpoint_dir=/var/lib/lxc/$name/checkpoint
+
+do_rsync() {
+  rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $1 $host:$1
+}
+
+# we assume the same lxcpath on both hosts, that is bad.
+LXCPATH=$(lxc-config lxc.lxcpath)
+
+rm -fr ${checkpoint_dir}
+
+date1=$(date -u +"%s%3N")
+
+lxc-checkpoint -s -n $name -D $checkpoint_dir -v -l DEBUG
+echo "Finished checkpointing"
+
+date2=$(date -u +"%s%3N")
+
+do_rsync $LXCPATH/$name/
+echo "Finished rsync"
+
+date4=$(date -u +"%s%3N")
+ssh $host "sudo lxc-checkpoint -r -n $name -D $checkpoint_dir -v"
+echo "Finished restore"
+
+date5=$(date -u +"%s%3N")
+
+ssh $host "sudo lxc-wait -n $name -s RUNNING"
+echo "Finished wait"
+
+echo "*****************************************\n"
+echo "Empty Container $name\n" >> stats.txt
+du -sh $LXCPATH/$name/* >> stats.txt
+echo "\n"
+diff=$(($date2-$date1))
+echo "Checkpoint: $diff ms\n" >> stats.txt
+diff=$(($date4-$date2))
+echo "Rsync: $diff ms\n" >> stats.txt
+diff=$(($date5-$date4))
+echo "Restore: $diff ms\n" >> stats.txt
+
+#rm -fr ${checkpoint_dir}
