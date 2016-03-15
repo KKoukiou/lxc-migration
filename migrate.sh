@@ -54,7 +54,7 @@ elif [ $OPTION -eq 3 ]; then
 		mount -t tmpfs -o size=1500M,mode=0777 tmpfs /var/lib/lxc/$CNAME/checkpoint/ 
 	fi
 	ssh $HOST "if mount|grep 'tmpfs on /var/lib/lxc/$CNAME/checkpoint'; then
-	echo /var/lib/lxc/$CNAME/checkpoint allready mounted' 
+	echo '/var/lib/lxc/$CNAME/checkpoint allready mounted' 
 	else
 	mount -t tmpfs -o size=1500M,mode=0777 tmpfs /var/lib/lxc/$CNAME/checkpoint/ 
 	fi"
@@ -84,8 +84,10 @@ fi
 #might false decide that dumping is over if criu dump processes a large /proc/pid/mmaps 
 #and the directory does not change for a while
 if [ $OPTION -eq 1 ] || [ $OPTION -eq 3 ]; then 
-	nohup bash rsync.sh $CNAME $HOST& 
+	rm nohup.out
+	nohup ./rsync.sh $CNAME $HOST& 
 	rsync_pid=$!
+	echo "rsync_pid = $rsync_pid"
 else 
 	rsync_pid=-1
 fi
