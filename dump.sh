@@ -72,7 +72,8 @@ for iter in $(seq 1 $ITERS); do
 		sync_start=$(date -u +"%s%6N")
 		if [ $fin -eq 1 ] ; then
 			kill -9 $rsync_pid
-			rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
+			#rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
+			rsync -aAXHltzh --progress --numeric-ids --devices --inplace --stats --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
 			sync_finish=$(date -u +"%s%6N")	
 			diff=$(($sync_finish- $sync_start))
 			echo "Final Rsync: $diff μ" |tee -a statistic.txt

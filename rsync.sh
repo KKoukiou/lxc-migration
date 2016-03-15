@@ -14,7 +14,9 @@ do
 	dif=$(( cur_size - prev_size ))
 	if (( dif > mb_thres ))
 	then 
-		rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
+		#check the correctness of the inplace flag
+		#--partial does not delete partial tranferred files if tranfer interrupted
+		rsync -aAXHltzh --partial --progress --numeric-ids --devices --inplace --stats --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
 	else 
 		if ((dif == 0 ))
 		then 
