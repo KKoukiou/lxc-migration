@@ -64,19 +64,26 @@ for iter in $(seq 1 $ITERS); do
 		echo "Seems to have failed"
 		return 0 
 	fi
- 
-	#ssh $HOST "mkdir $checkpointdir/$iter"		
-
-	#When on final dump,Kill the rsync process and continue with a new one. That will be the last rsync	
+ 	
+	
 	if [ $rsync_pid -ne -1 ]; then
 		sync_start=$(date -u +"%s%6N")
 		if [ $fin -eq 1 ] ; then
-			kill -9 $rsync_pid
+			while :
+			do
+			f=$( rsync -aAXHltzhv --dry-run --numeric-ids --stats --update --inplace --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/ |grep -- "Total transferred file size:" | sed 's/[^0-9]//g' )
+			if [ $f -eq 0 ]; then 
+				killall -9 rsync.sh
+				sync_finish=$(date -u +"%s%6N")	
+				diff=$(($sync_finish- $sync_start))
+				echo "Final Rsync: $diff μ" |tee -a statistic.txt
+				break
+			else 
+				echo "Directories not synched"
+			fi
+			done
 			#rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
-			rsync -aAXHltzh --progress --numeric-ids --devices --inplace --stats --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
-			sync_finish=$(date -u +"%s%6N")	
-			diff=$(($sync_finish- $sync_start))
-			echo "Final Rsync: $diff μ" |tee -a statistic.txt
+			#rsync -aAXHltzhv --numeric-ids --stats --update --inplace --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
 		fi
 	fi
 	
