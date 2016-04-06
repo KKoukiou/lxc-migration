@@ -66,25 +66,10 @@ for iter in $(seq 1 $ITERS); do
 	fi
  	
 	
-	if [ $rsync_pid -ne -1 ]; then
+	if [ $rsync_pid -eq 1 ]; then
 		sync_start=$(date -u +"%s%6N")
-		if [ $fin -eq 1 ] ; then
-			while :
-			do
-			f=$( rsync -aAXHltzhv --dry-run --numeric-ids --stats --update --inplace --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/ |grep -- "Total transferred file size:" | sed 's/[^0-9]//g' )
-			if [ $f -eq 0 ]; then 
-				killall -9 rsync.sh
-				sync_finish=$(date -u +"%s%6N")	
-				diff=$(($sync_finish- $sync_start))
-				echo "Final Rsync: $diff μ" |tee -a statistic.txt
-				break
-			else 
-				echo "Directories not synched"
-			fi
-			done
-			#rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
-			#rsync -aAXHltzhv --numeric-ids --stats --update --inplace --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
-		fi
+		rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
+		#rsync -aAXHltzhv --numeric-ids --stats --update --inplace --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
 	fi
 	
 	du -sh $checkpointdir/$iter/ | tee -a statistic.txt

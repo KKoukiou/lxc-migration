@@ -40,58 +40,54 @@ then
 	#configure /etc/exports, then exportfs -a, service nfs-kernel-server restart
 	#restore from Disk	
 	echo "Migrate $CNAME to $HOST,checkpoint on disk,restore from disk,checkpoint directory shared over NFS" |tee -a statistic.txt
-	if mount|grep "$DESTIP:/var/lib/lxc/$CNAME/checkpoint on /var/lib/lxc/$CNAME/checkpoint"; then
-		echo "$DESTIP:/var/lib/lxc/$CNAME/checkpoint allready mounted" 
+	if mount|grep "$DESTIP:$checkpointdir on $checkpointdir"; then
+		echo "$DESTIP:$checkpointdir allready mounted" 
 	else
-		mount $DESTIP:/var/lib/lxc/$CNAME/checkpoint /var/lib/lxc/$CNAME/checkpoint
+		mount $DESTIP:$checkpointdir $checkpointdir
 	fi
 elif [ $OPTION -eq 3 ]; then
 	# 3: checkpoint on tmpfs, rsync restore from tmpfs 
 	echo "Migrate $CNAME to $HOST,checkpoint on tmpfs,rsync,restore from tmpfs" |tee -a statistic.txt
-	if mount|grep "tmpfs on /var/lib/lxc/$CNAME/checkpoint"; then
-		echo "/var/lib/lxc/$CNAME/checkpoint allready mounted" 
+	if mount|grep "tmpfs on $checkpointdir"; then
+		echo "$checkpointdir allready mounted" 
 	else
-		mount -t tmpfs -o size=1500M,mode=0777 tmpfs /var/lib/lxc/$CNAME/checkpoint/ 
+		mount -t tmpfs -o size=1500M,mode=0777 tmpfs $checkpointdir 
 	fi
-	ssh $HOST "if mount|grep 'tmpfs on /var/lib/lxc/$CNAME/checkpoint'; then
-	echo '/var/lib/lxc/$CNAME/checkpoint allready mounted' 
+	ssh $HOST "if mount|grep 'tmpfs on $checkpointdir'; then
+	echo '$checkpointdir allready mounted' 
 	else
-	mount -t tmpfs -o size=1500M,mode=0777 tmpfs /var/lib/lxc/$CNAME/checkpoint/ 
+	mount -t tmpfs -o size=1500M,mode=0777 tmpfs $checkpointdir 
 	fi"
 elif [ $OPTION -eq 4 ]; then 
 	# 4: checkpoint on tmpfs. Destination host has nfs over tmpfs on the checkpoint directory, so no rsync is needed.
 	echo "Migrate $CNAME to $HOST,checkpoint on tmpfs,restore from tmpfs,checkpoint directory shared over NFS" |tee -a statistic.txt
-	if mount|grep "tmpfs on /var/lib/lxc/$CNAME/checkpoint"; then
-		echo "/var/lib/lxc/$CNAME/checkpoint allready mounted" 
+	if mount|grep "tmpfs on $checkpointdir"; then
+		echo "$checkpointdir allready mounted" 
 	else
-		mount -t tmpfs -o size=1500M,mode=0777 tmpfs /var/lib/lxc/$CNAME/checkpoint/ 
+		mount -t tmpfs -o size=1500M,mode=0777 tmpfs $checkpointdir 
 	fi
-	ssh $HOST "if mount|grep 'tmpfs on /var/lib/lxc/$CNAME/checkpoint'; then
-	echo /var/lib/lxc/$CNAME/checkpoint allready mounted' 
+	ssh $HOST "if mount|grep 'tmpfs on $checkpointdir'; then
+	echo $checkpointdir allready mounted' 
 	else
-	mount -t tmpfs -o size=1500M,mode=0777 tmpfs /var/lib/lxc/$CNAME/checkpoint/ 
+	mount -t tmpfs -o size=1500M,mode=0777 tmpfs $checkpointdir 
 	fi"
-	if mount|grep "$DESTIP:/var/lib/lxc/$CNAME/checkpoint on /var/lib/lxc/$CNAME/checkpoint"; then
-		echo "$DESTIP:/var/lib/lxc/$CNAME/checkpoint allready mounted" 
+	if mount|grep "$DESTIP:$checkpointdir on $checkpointdir"; then
+		echo "$DESTIP:$checkpointdir allready mounted" 
 	else
-		mount $DESTIP:/var/lib/lxc/$CNAME/checkpoint /var/lib/lxc/$CNAME/checkpoint
+		mount $DESTIP:$checkpointdir $checkpointdir
 	fi
 fi 
-
 
 #Let a backround process rsync the checkpoint directory. When final dump finishes 
 #kill this daemon and continue with a final rsync. This because when daemon rsync 
 #might false decide that dumping is over if criu dump processes a large /proc/pid/mmaps 
 #and the directory does not change for a while
 if [ $OPTION -eq 1 ] || [ $OPTION -eq 3 ]; then 
-	rm nohup.out
-	nohup ./rsync.sh $CNAME $HOST& 
-	rsync_pid=$!
-	echo "rsync_pid = $rsync_pid"
+	do_rsync=1
 else 
-	rsync_pid=-1
+	do_rsync=0
 fi
-	
+
 source dump.sh $CNAME $ITERS $HOST $PID $rsync_pid 
 returnval=$?
 
