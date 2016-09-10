@@ -4,7 +4,6 @@ CNAME=$1
 ITERS=$2
 HOST=$3
 PID=$4
-rsync_pid=$5
 PORT=12345
 echo "CANEM = $CNAME ITERS = $ITERS HOST = $HOST pid = $PID "
 
@@ -66,11 +65,11 @@ for iter in $(seq 1 $ITERS); do
 	fi
  	
 	
-	if [ $rsync_pid -eq 1 ]; then
-		sync_start=$(date -u +"%s%6N")
-		rsync -aAXHltzh --progress --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
-		#rsync -aAXHltzhv --numeric-ids --stats --update --inplace --rsync-path="sudo rsync" $checkpointdir/ $HOST:/$checkpointdir/
-	fi
+	sync_start=$(date -u +"%s%6N")
+	rsync -aAXHltzh --numeric-ids --devices --rsync-path="sudo rsync" $checkpointdir/$iter/ $HOST:/$checkpointdir/$iter/
+	sync_finish=$(date -u +"%s%6N")	
+	diff=$(($sync_finish- $sync_start))
+	echo "Rsync $iter: $diff μ"  |tee -a statistic.txt
 	
 	du -sh $checkpointdir/$iter/ | tee -a statistic.txt
 	
